@@ -9,7 +9,9 @@ from user_anomalies import user_anomalies
 class Image(object):
     images_path = 'images'
     cache_path = '.cache'
+    anomaly_detectors = set()
     images = {}
+    compare_base = {}
 
     def __init__(self, name, path):
         self.path = path
@@ -30,7 +32,14 @@ class Image(object):
                 json.dump(self.features, f)
 
     def set_as_anomaly(self, who_says_that, description=""):
+        self.anomaly_detectors.add(who_says_that)
         self.anomaly_by[who_says_that] = description
+
+    def detected_by(self, anomaly_detector):
+        return anomaly_detector in self.anomaly_by
+
+    def is_in_base(self):
+        return self.name in self.compare_base
 
 
     @classmethod
@@ -53,6 +62,11 @@ class Image(object):
         for who_says_that in user_anomalies:
             for image_name, description in user_anomalies[who_says_that].items():
                 Image.set_image_as_anomaly(image_name, who_says_that, description)
+
+        for image in Image.get_images():
+            if len(image.anomaly_by) >= 2:
+                cls.compare_base[image.name] = image
+
 
     @classmethod
     def get_images(cls):

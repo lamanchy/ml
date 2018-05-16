@@ -2,6 +2,7 @@
 import json
 import os
 
+from libraries.pca.pca import pca
 from load_features import load_image_features
 from user_anomalies import user_anomalies
 
@@ -43,14 +44,15 @@ class Image(object):
 
 
     @classmethod
-    def load_images(cls, limit=None):
-        i = 0
-        for file_name in os.listdir(cls.images_path):
-            if limit is not None and i >= limit:
+    def load_images(cls, max_images=None, pca_dimensions=None):
+        for i, file_name in enumerate(os.listdir(cls.images_path)):
+            if max_images is not None and i >= max_images:
                 break
 
-            i += 1
             cls.images[file_name] = Image(file_name, os.path.join(cls.images_path, file_name))
+
+        if pca_dimensions:
+            cls.perform_pca(pca_dimensions)
 
     @classmethod
     def set_image_as_anomaly(cls, image_name, who_says_that, description=""):
@@ -72,3 +74,10 @@ class Image(object):
     def get_images(cls):
         return cls.images.values()
 
+    @classmethod
+    def perform_pca(cls, pca_dimensions):
+        images = Image.get_images()
+        data = [image.features for image in images]
+        data, _, _ = pca(data, pca_dimensions)
+        for i, new_features in enumerate(data):
+            images[i].features = new_features

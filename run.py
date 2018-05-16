@@ -11,7 +11,7 @@ def run():
     start_time = datetime.now()
     test_tensorflow()
 
-    Image.load_images(limit=None)
+    Image.load_images(max_images=None, pca_dimensions=None)
 
     Image.load_user_anomalies()
 

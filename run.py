@@ -1,4 +1,5 @@
 # coding=utf-8
+from collections import OrderedDict
 from datetime import datetime
 
 from example_of_computing_anomalies import example_of_computing_anomalies
@@ -11,14 +12,14 @@ def run():
     start_time = datetime.now()
     test_tensorflow()
 
-    Image.load_images(max_images=None, pca_dimensions=None)
+    Image.load_images(max_images=None, pca_dimensions=2)
 
     Image.load_user_anomalies()
 
     # optional
     # Image do PCA to reduce dimensionality https://cs.wikipedia.org/wiki/Anal%C3%BDza_hlavn%C3%ADch_komponent
 
-    compute_lof()
+    compute_lof(number_of_neighbours=5, max_number_of_outliers=5.0 * len(Image.get_images()) / 100)
 
     for anomaly_detector in Image.anomaly_detectors:
         tp = tn = fp = fn = total = float(0)
@@ -36,16 +37,20 @@ def run():
         # https://en.wikipedia.org/wiki/Confusion_matrix
         print
         print "Anomaly detector %s:" % anomaly_detector
-        print "accuracy:              %20f (how many percent is right)" % ((tp + tn)/total)
-        print "precision:             %20f (tp/(tp + fp))" % (tp/(tp + fp))
-        print "recall:                %20f (probability of detection)" % (tp/(tp + fn))
-        print "false negative rate:   %20f (miss rate)" % (fn/(tp + fn))
-        print "fall-out:              %20f (false alarm detection)" % (fp/(fp + tn))
-        print "f1 score:              %20f (0 - worst, 1 - best)" % (2*tp/(2*tp + fp + fn))
+        print "accuracy:              %20f (how many percent is right)" % ((tp + tn) / total if total > 0 else 0)
+        print "precision:             %20f (tp/(tp + fp))" % (tp / (tp + fp) if tp + fp > 0 else 0)
+        print "recall:                %20f (probability of detection)" % (tp / (tp + fn) if tp + fn > 0 else 0)
+        print "false negative rate:   %20f (miss rate)" % (fn / (tp + fn) if tp + fn > 0 else 1)
+        print "fall-out:              %20f (false alarm detection)" % (fp / (fp + tn) if fp + tn > 0 else 1)
+        print "f1 score:              %20f (0 - worst, 1 - best)" % (
+        2 * tp / (2 * tp + fp + fn) if tp + fp + fn > 0 else 0)
         print
 
     print
     print "execution took %d seconds" % (datetime.now() - start_time).total_seconds()
+
+    if Image.get_feature_dimensions() == 2:
+        Image.create_plot()
 
 
 if __name__ == "__main__":

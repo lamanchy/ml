@@ -1,10 +1,12 @@
 # coding=utf-8
 import json
 import os
+from collections import OrderedDict
 
 from libraries.pca.pca import pca
 from load_features import load_image_features
 from user_anomalies import user_anomalies
+from matplotlib import pyplot as p
 
 
 class Image(object):
@@ -81,3 +83,25 @@ class Image(object):
         data, _, _ = pca(data, pca_dimensions)
         for i, new_features in enumerate(data):
             images[i].features = new_features
+
+    @classmethod
+    def get_feature_dimensions(cls):
+        return len(Image.get_images()[0].features)
+
+    @classmethod
+    def create_plot(cls):
+        print "Creating graph"
+
+        for image in Image.get_images():
+            for anomaly_detector, color in zip(Image.anomaly_detectors, ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FF00FF", ]):
+                if image.detected_by(anomaly_detector):
+                    p.scatter(image.features[0], image.features[1], color=color, label=anomaly_detector, alpha=0.3, s=20.0*5)
+
+            if image.is_in_base():
+                p.scatter(image.features[0], image.features[1], color="#000000", label="anomaly by two and more people", alpha=1, s=10.0*5)
+            p.scatter(image.features[0], image.features[1], color="#000000", label="all", alpha=1, s=1*5)
+
+        handles, labels = p.gca().get_legend_handles_labels()
+        by_label = OrderedDict(zip(labels, handles))
+        p.legend(by_label.values(), by_label.keys())
+        p.show()

@@ -89,6 +89,8 @@ class Image(object):
         for i, new_features in enumerate(data):
             images[i].features = new_features
 
+        cls.normalize_features()
+
     @classmethod
     def get_feature_dimensions(cls):
         return len(Image.get_images()[0].features)

@@ -1,10 +1,9 @@
 # coding=utf-8
-from collections import OrderedDict
 from datetime import datetime
 
-from example_of_computing_anomalies import example_of_computing_anomalies
+from autoencoder import run_autoencoder
 from image import Image
-from lof import compute_lof
+from lof import run_lof
 from test_tensorflow import test_tensorflow
 
 
@@ -12,14 +11,13 @@ def run():
     start_time = datetime.now()
     test_tensorflow()
 
-    Image.load_images(max_images=None, pca_dimensions=2)
+    Image.load_images(max_images=None, pca_dimensions=512)
 
     Image.load_user_anomalies()
 
-    # optional
-    # Image do PCA to reduce dimensionality https://cs.wikipedia.org/wiki/Anal%C3%BDza_hlavn%C3%ADch_komponent
-
-    compute_lof(number_of_neighbours=5, max_number_of_outliers=5.0 * len(Image.get_images()) / 100)
+    five_percent = 5.0 * len(Image.get_images()) / 100
+    run_lof(number_of_neighbours=5, max_number_of_outliers=five_percent)
+    run_autoencoder(batch_size=16, number_of_outliers=five_percent)
 
     for anomaly_detector in Image.anomaly_detectors:
         tp = tn = fp = fn = total = float(0)
@@ -42,15 +40,16 @@ def run():
         print "recall:                %20f (probability of detection)" % (tp / (tp + fn) if tp + fn > 0 else 0)
         print "false negative rate:   %20f (miss rate)" % (fn / (tp + fn) if tp + fn > 0 else 1)
         print "fall-out:              %20f (false alarm detection)" % (fp / (fp + tn) if fp + tn > 0 else 1)
-        print "f1 score:              %20f (0 - worst, 1 - best)" % (
-        2 * tp / (2 * tp + fp + fn) if tp + fp + fn > 0 else 0)
+        print "f1 score:              %20f (0 - worst, 1 - best)" % \
+              (2 * tp / (2 * tp + fp + fn) if tp + fp + fn > 0 else 0)
         print
 
     print
     print "execution took %d seconds" % (datetime.now() - start_time).total_seconds()
 
-    if Image.get_feature_dimensions() == 2:
-        Image.create_plot()
+    # after all computation, reduce dims to 2 and plot result
+    Image.perform_pca(2)
+    Image.create_plot()
 
 
 if __name__ == "__main__":

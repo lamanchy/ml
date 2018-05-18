@@ -4,6 +4,8 @@ import os
 from collections import OrderedDict
 
 from libraries.pca.pca import pca
+import warnings
+import numpy as np
 from load_features import load_image_features
 from user_anomalies import user_anomalies
 from matplotlib import pyplot as p
@@ -56,6 +58,9 @@ class Image(object):
         if pca_dimensions:
             cls.perform_pca(pca_dimensions)
 
+        cls.normalize_features()
+
+
     @classmethod
     def set_image_as_anomaly(cls, image_name, who_says_that, description=""):
         if image_name in cls.images:
@@ -105,3 +110,23 @@ class Image(object):
         by_label = OrderedDict(zip(labels, handles))
         p.legend(by_label.values(), by_label.keys())
         p.show()
+
+    @classmethod
+    def normalize_features(cls):
+        features = [image.features for image in cls.get_images()]
+        max_values = np.max(features, axis=0)
+        min_values = np.min(features, axis=0)
+
+        diff = max_values - min_values
+        if not np.all(diff):
+            problematic_dimensions = ", ".join(str(i + 1) for i, v
+                                               in enumerate(diff) if v == 0)
+            warnings.warn("No data variation in dimensions: %s. You should "
+                          "check your data or disable normalization."
+                          % problematic_dimensions)
+
+        features = (features - min_values) / (max_values - min_values)
+        features[np.logical_not(np.isfinite(features))] = 0
+
+        for i, image in enumerate(cls.get_images()):
+            image.features = features[i].tolist()

@@ -2,6 +2,7 @@
 import json
 import os
 import warnings
+from PIL.Image import ANTIALIAS
 from collections import OrderedDict
 
 import numpy as np
@@ -25,6 +26,7 @@ class Image(object):
     anomaly_detectors = set()
     images = {}
     compare_base = {}
+    feature_model_name = None
     feature_model = None
     fmf = None
 
@@ -36,25 +38,30 @@ class Image(object):
         self.load_features()
 
     def load_features(self):
-        cache_name = os.path.join(self.cache_path, self.name + '-' + self.feature_model.name + '.features')
+        cache_name = os.path.join(self.cache_path, self.name + '-' + self.feature_model_name + '.features')
         if os.path.exists(cache_name):
             with open(cache_name, 'r') as f:
                 self.features = json.load(f)
         else:
-            print 'computing features for ' + self.name
+            print 'computing ' + self.feature_model_name + ' features for ' + self.name + ' (' + str(len(Image.get_images())) + ')'
             self.features = [float(i) for i in self.load_image_features()]
             with open(cache_name, 'w') as f:
                 json.dump(self.features, f)
 
     def load_image_features(self):
+        if self.feature_model is None:
+            self.set_feature_model(self.feature_model_name)
+
         image_file = keras_image.load_img(self.path)
+        if image_file.size[0] < 200 or image_file.size[1] < 200:
+            ratio = max(200.0/image_file.size[0], 200.0/image_file.size[1])
+            image_file = image_file.resize((int(image_file.size[0]*ratio), int(image_file.size[1]*ratio)), resample=ANTIALIAS)
 
         preprocessed_data = keras_image.img_to_array(image_file)
         preprocessed_data = np.expand_dims(preprocessed_data, axis=0)
         preprocessed_data = self.fmf(preprocessed_data)
 
         res = self.feature_model.predict(preprocessed_data)[0]
-        print len(res), res
         return res
 
     def set_as_anomaly(self, who_says_that, description=""):
@@ -69,7 +76,8 @@ class Image(object):
 
     @classmethod
     def load_images(cls, max_images=None, pca_dimensions=None, feature_model_name='vgg16'):
-        cls.set_feature_model(feature_model_name)
+        cls.feature_model_name = feature_model_name
+        cls.feature_model = None
 
         if not os.path.exists(cls.cache_path):
             os.mkdir(cls.cache_path)

@@ -11,7 +11,8 @@ def run():
     start_time = datetime.now()
     test_tensorflow()
 
-    Image.load_images(max_images=None, pca_dimensions=512)
+                                                                            # vgg16, vgg19, xception, resnet50
+    Image.load_images(max_images=None, pca_dimensions=512, feature_model_name='vgg16')
 
     Image.load_user_anomalies()
 

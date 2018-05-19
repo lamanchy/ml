@@ -1,14 +1,22 @@
 # coding=utf-8
 import json
 import os
+import warnings
 from collections import OrderedDict
 
-from libraries.pca.pca import pca
-import warnings
 import numpy as np
-from load_features import load_image_features
-from user_anomalies import user_anomalies
+from keras.applications.resnet50 import ResNet50
+from keras.applications.resnet50 import preprocess_input as preprocess_input_resnet50
+from keras.applications.vgg16 import VGG16
+from keras.applications.vgg16 import preprocess_input as preprocess_input_vgg16
+from keras.applications.vgg19 import preprocess_input as preprocess_input_vgg19, VGG19
+from keras.applications.xception import Xception
+from keras.applications.xception import preprocess_input as preprocess_input_xception
+from keras.preprocessing import image as keras_image
 from matplotlib import pyplot as p
+
+from libraries.pca.pca import pca
+from user_anomalies import user_anomalies
 
 
 class Image(object):
@@ -17,6 +25,8 @@ class Image(object):
     anomaly_detectors = set()
     images = {}
     compare_base = {}
+    feature_model = None
+    fmf = None
 
     def __init__(self, name, path):
         self.path = path
@@ -26,15 +36,26 @@ class Image(object):
         self.load_features()
 
     def load_features(self):
-        cache_name = os.path.join(self.cache_path, self.name + '.features')
+        cache_name = os.path.join(self.cache_path, self.name + '-' + self.feature_model.name + '.features')
         if os.path.exists(cache_name):
             with open(cache_name, 'r') as f:
                 self.features = json.load(f)
         else:
             print 'computing features for ' + self.name
-            self.features = [float(i) for i in load_image_features(self.path)]
+            self.features = [float(i) for i in self.load_image_features()]
             with open(cache_name, 'w') as f:
                 json.dump(self.features, f)
+
+    def load_image_features(self):
+        image_file = keras_image.load_img(self.path)
+
+        preprocessed_data = keras_image.img_to_array(image_file)
+        preprocessed_data = np.expand_dims(preprocessed_data, axis=0)
+        preprocessed_data = self.fmf(preprocessed_data)
+
+        res = self.feature_model.predict(preprocessed_data)[0]
+        print len(res), res
+        return res
 
     def set_as_anomaly(self, who_says_that, description=""):
         self.anomaly_detectors.add(who_says_that)
@@ -46,9 +67,13 @@ class Image(object):
     def is_in_base(self):
         return self.name in self.compare_base
 
-
     @classmethod
-    def load_images(cls, max_images=None, pca_dimensions=None):
+    def load_images(cls, max_images=None, pca_dimensions=None, feature_model_name='vgg16'):
+        cls.set_feature_model(feature_model_name)
+
+        if not os.path.exists(cls.cache_path):
+            os.mkdir(cls.cache_path)
+
         for i, file_name in enumerate(os.listdir(cls.images_path)):
             if max_images is not None and i >= max_images:
                 break
@@ -59,7 +84,6 @@ class Image(object):
             cls.perform_pca(pca_dimensions)
 
         cls.normalize_features()
-
 
     @classmethod
     def set_image_as_anomaly(cls, image_name, who_says_that, description=""):
@@ -75,7 +99,6 @@ class Image(object):
         for image in Image.get_images():
             if len(image.anomaly_by) >= 2:
                 cls.compare_base[image.name] = image
-
 
     @classmethod
     def get_images(cls):
@@ -100,13 +123,16 @@ class Image(object):
         print "Creating graph"
 
         for image in Image.get_images():
-            for anomaly_detector, color in zip(Image.anomaly_detectors, ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FF00FF", ]):
+            for anomaly_detector, color in zip(Image.anomaly_detectors,
+                                               ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FF00FF", ]):
                 if image.detected_by(anomaly_detector):
-                    p.scatter(image.features[0], image.features[1], color=color, label=anomaly_detector, alpha=0.3, s=20.0*5)
+                    p.scatter(image.features[0], image.features[1], color=color, label=anomaly_detector, alpha=0.3,
+                              s=20.0 * 5)
 
             if image.is_in_base():
-                p.scatter(image.features[0], image.features[1], color="#000000", label="anomaly by two and more people", alpha=1, s=10.0*5)
-            p.scatter(image.features[0], image.features[1], color="#000000", label="all", alpha=1, s=1*5)
+                p.scatter(image.features[0], image.features[1], color="#000000", label="anomaly by two and more people",
+                          alpha=1, s=10.0 * 5)
+            p.scatter(image.features[0], image.features[1], color="#000000", label="all", alpha=1, s=1 * 5)
 
         handles, labels = p.gca().get_legend_handles_labels()
         by_label = OrderedDict(zip(labels, handles))
@@ -132,3 +158,24 @@ class Image(object):
 
         for i, image in enumerate(cls.get_images()):
             image.features = features[i].tolist()
+
+    @classmethod
+    def set_feature_model(cls, model_name):
+        if model_name == 'vgg16':
+            cls.feature_model = VGG16(weights='imagenet', include_top=False, pooling='avg')
+            cls.fmf = lambda self, x: preprocess_input_vgg16(x)
+
+        elif model_name == 'vgg19':
+            cls.feature_model = VGG19(weights='imagenet', include_top=False, pooling='avg')
+            cls.fmf = lambda self, x: preprocess_input_vgg19(x)
+
+        elif model_name == 'xception':
+            cls.feature_model = Xception(weights='imagenet', include_top=False, pooling='avg')
+            cls.fmf = lambda self, x: preprocess_input_xception(x)
+
+        elif model_name == 'resnet50':
+            cls.feature_model = ResNet50(weights='imagenet', include_top=False, pooling='avg')
+            cls.fmf = lambda self, x: preprocess_input_resnet50(x)
+
+        else:
+            raise ValueError("Unknown model")

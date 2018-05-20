@@ -2,28 +2,15 @@ import numpy as np
 from image import Image
 
 
-def compute_zscore():
-    threshold = 2.5
-
+def compute_zscore(threshold):
     images = Image.get_images()
-    image_feat = []
-    for image in images:
-        image_feat.append(image.features)
+    features = np.array([i.features for i in images])
 
-    mean = np.mean(image_feat)
-    print "mean: ", mean
-    stdev = np.std(image_feat)
-    print "stdev: ", stdev
-    z_scores = [(image - mean) / stdev for image in image_feat]
-    # print "z_scores", np.abs(z_scores)
+    z_scores = np.abs(features - features.mean(axis=0) / features.std(axis=0))
+    for i, z_score in enumerate(z_scores):
+        if (z_score > threshold).any():
+            images[i].set_as_anomaly('z-score')
 
-    anomalies = np.where(np.abs(z_scores) > threshold)
-    print "anomalies: ", anomalies
 
-    for i, outlier in enumerate(anomalies):
-        for image in Image.get_images():
-            # if anomalies()[0] == image:
-            # # if list(outlier["instance"]) == image[i]:
-            #     image.set_as_anomaly('zscore', 'outlier')
-            break
-
+if __name__ == "__main__":
+    compute_zscore(2.1)

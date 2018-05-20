@@ -13,4 +13,5 @@ def compute_zscore(threshold):
 
 
 if __name__ == "__main__":
+    Image.load_images()
     compute_zscore(2.1)

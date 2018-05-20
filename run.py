@@ -5,6 +5,7 @@ from autoencoder import run_autoencoder
 from image import Image
 from lof import run_lof
 from test_tensorflow import test_tensorflow
+from zscore import compute_zscore
 
 
 def run():
@@ -19,6 +20,7 @@ def run():
     five_percent = 5.0 * len(Image.get_images()) / 100
     run_lof(number_of_neighbours=5, max_number_of_outliers=five_percent)
     run_autoencoder(batch_size=16, number_of_outliers=five_percent)
+    compute_zscore(12)
 
     for anomaly_detector in Image.anomaly_detectors:
         tp = tn = fp = fn = total = float(0)

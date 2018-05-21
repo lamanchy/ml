@@ -1,7 +1,7 @@
 # coding=utf-8
 
 from __future__ import division
-from math import floor
+from math import floor, ceil
 import numpy as np
 from image import Image
 from keras.layers import Input, Dense
@@ -133,11 +133,16 @@ def test_predict_image(autoencoder, test_image):
     return mse.tolist()[0]
 
 
-def run_autoencoder(batch_size, number_of_outliers):
+def run_autoencoder(batch_size, number_of_outliers, layers=None, plot_loss=False):
+    if layers is None:
+        layers = [(3/4, 'sigmoid'), (2/3, 'relu'), (1/6, 'relu'), (1/12, 'relu')]
+
     print "training autoencoder"
-    autoencoder = build_autoencoder(size_of_input=Image.get_feature_dimensions())
+    autoencoder = build_customized_autoencoder(input=Image.get_feature_dimensions(), layers=layers, output_activation='relu')
     history = train(autoencoder, np.array([i.features for i in Image.get_images()]), batch_size=batch_size)
-    model_loss_plot(history)
+
+    if plot_loss:
+        model_loss_plot(history)
 
     outliers = [(image, test_predict_image(autoencoder, image.features)) for image in Image.get_images()]
     outliers.sort(key=lambda x: x[1], reverse=True)

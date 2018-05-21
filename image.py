@@ -140,6 +140,9 @@ class Image(object):
             if image.is_in_base():
                 p.scatter(image.features[0], image.features[1], color="#000000", label="anomaly by two and more people",
                           alpha=1, s=10.0 * 5)
+            if sum([(1 if image.detected_by(anomaly_detector) else 0) for anomaly_detector in ['lof', 'z-score', 'autoencoder']]) > 1:
+                p.scatter(image.features[0], image.features[1], color="#000FFF", label="anomaly by two and more detectors",
+                          alpha=1, s=10.0 * 5)
             p.scatter(image.features[0], image.features[1], color="#000000", label="all", alpha=1, s=1 * 5)
 
         handles, labels = p.gca().get_legend_handles_labels()

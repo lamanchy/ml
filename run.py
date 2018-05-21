@@ -1,4 +1,5 @@
 # coding=utf-8
+from __future__ import division
 from datetime import datetime
 
 from autoencoder import run_autoencoder
@@ -7,13 +8,12 @@ from lof import run_lof
 from test_tensorflow import test_tensorflow
 from zscore import compute_zscore
 
-
 def run():
     start_time = datetime.now()
     test_tensorflow()
 
                                                                             # vgg16, vgg19, xception, resnet50
-    Image.load_images(max_images=None, pca_dimensions=512, feature_model_name='vgg16')
+    Image.load_images(max_images=None, pca_dimensions=12, feature_model_name='vgg16')
 
     Image.load_user_anomalies()
 

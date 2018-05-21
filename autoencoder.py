@@ -1,7 +1,7 @@
 # coding=utf-8
 
 from __future__ import division
-from math import floor, ceil
+from math import ceil
 import numpy as np
 from image import Image
 from keras.layers import Input, Dense
@@ -33,25 +33,25 @@ def build_customized_autoencoder(input=512, layers=[], optimizer='adadelta', los
     :return: network with layers, optimizer and loss
     """
     if not layers:
-        layers.append((floor(input/2), 'sigmoid'))
+        layers.append((ceil(input/2), 'sigmoid'))
 
     # check whether the num of neurons is decreasing towards the center of net
     tmp = input
     for l in layers:
-        if floor(l[0] * input) > tmp:
-            print('Number of neurons should be lower than ' + str(tmp) + '! Actual number of neurons: ' + str(floor(l[0] * input)))
-        tmp = floor(l[0] * input)
+        if ceil(l[0] * input) > tmp:
+            print('Number of neurons should be lower than ' + str(tmp) + '! Actual number of neurons: ' + str(ceil(l[0] * input)))
+        tmp = ceil(l[0] * input)
 
     # create layers towards the center of net
     tmp_layer1 = Input(shape=(input,))
     input_layer = tmp_layer1
     for i in range(len(layers)):
-        tmp_layer2 = Dense(int(floor(layers[i][0] * input)), activation=layers[i][1])(tmp_layer1)
+        tmp_layer2 = Dense(int(ceil(layers[i][0] * input)), activation=layers[i][1])(tmp_layer1)
         tmp_layer1 = tmp_layer2
 
     # create layers from the center of net (symmetric as previous layers towards the center of net)
     for i in range(len(layers)-2, 0-1, -1):
-        tmp_layer2 = Dense(int(floor(layers[i][0] * input)), activation=layers[i][1])(tmp_layer1)
+        tmp_layer2 = Dense(int(ceil(layers[i][0] * input)), activation=layers[i][1])(tmp_layer1)
         tmp_layer1 = tmp_layer2
 
     output_layer = Dense(input, activation=output_activation)(tmp_layer1)

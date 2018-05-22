@@ -30,6 +30,9 @@ class Image(object):
     feature_model = None
     fmf = None
 
+    current_training_data = None
+    current_validation_data = None
+
     def __init__(self, name, path):
         self.path = path
         self.name = name
@@ -195,3 +198,15 @@ class Image(object):
 
         else:
             raise ValueError("Unknown model")
+
+    @classmethod
+    def get_training_data(cls, size=10):
+        assert size >= 2
+        images = cls.get_images()
+        minimum = int(len(images)/float(size))
+        for i in range(0, size):
+            low = i*minimum
+            high = (i+1)*minimum
+            cls.current_training_data = images[:low] + images[high:]
+            cls.current_validation_data = images[low:high]
+            yield "data in cls.current_..._data"

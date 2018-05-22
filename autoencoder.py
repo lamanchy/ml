@@ -139,16 +139,18 @@ def run_autoencoder(batch_size, number_of_outliers, layers=None, plot_loss=False
 
     print "training autoencoder"
     autoencoder = build_customized_autoencoder(input=Image.get_feature_dimensions(), layers=layers, output_activation='relu')
-    history = train(autoencoder, np.array([i.features for i in Image.get_images()]), batch_size=batch_size)
+    history = train(autoencoder, np.array([i.features for i in Image.current_training_data]), batch_size=batch_size)
 
     if plot_loss:
         model_loss_plot(history)
 
     outliers = [(image, test_predict_image(autoencoder, image.features)) for image in Image.get_images()]
     outliers.sort(key=lambda x: x[1], reverse=True)
-    for i in range(int(min(len(outliers), number_of_outliers))):
-        image, _ = outliers[i]
-        image.set_as_anomaly('autoencoder', '%d. outlier' % (i + 1))
+    threshold = outliers[number_of_outliers][1]
+    for image in Image.current_validation_data:
+        value = test_predict_image(autoencoder, image.features)
+        if value > threshold:
+            image.set_as_anomaly('autoencoder')
 
 
 # kdyz soubor primo spustis, tak __name__ je __main__, pokud tento soubor naimportujes, pak se to nespusti

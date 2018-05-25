@@ -15,7 +15,6 @@ def compute_zscore(max_number_of_outliers):
 
     for image in Image.current_validation_data:
         value = max(np.abs((np.array(image.features) - means) / stds))
-        print value, threshold
         if value > threshold:
             image.set_as_anomaly('z-score')
 

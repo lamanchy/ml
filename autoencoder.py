@@ -137,7 +137,7 @@ def run_autoencoder(batch_size, number_of_outliers, layers=None, plot_loss=False
     if layers is None:
         layers = [(3/4, 'sigmoid'), (2/3, 'relu'), (1/6, 'relu'), (1/12, 'relu')]
 
-    print "training autoencoder"
+    # print "training autoencoder"
     autoencoder = build_customized_autoencoder(input=Image.get_feature_dimensions(), layers=layers, output_activation='relu')
     history = train(autoencoder, np.array([i.features for i in Image.current_training_data]), batch_size=batch_size)
 

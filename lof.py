@@ -4,7 +4,7 @@ import numpy as np
 
 
 def run_lof(number_of_neighbours=5, max_number_of_outliers=None):
-    print "computing LOF"
+    # print "computing LOF"
     lof = outliers(number_of_neighbours, [tuple(image.features) for image in Image.current_training_data])
     last = (lof[max_number_of_outliers] if len(lof) >= max_number_of_outliers else lof[-1])['lof']
 

@@ -82,9 +82,9 @@ class Image(object):
         return self.name in self.compare_base
 
     @classmethod
-    def load_images(cls, anomalies="classless", max_images=None, pca_dimensions=None, feature_model_name='vgg16', filtering=None, base_as="intersection"):
-        if anomalies not in ["classless", "classbased"]:
-            raise ValueError("anomalies not in [classless, classbased]")
+    def load_images(cls, anomalies="classless", max_images=None, pca_dimensions=None, feature_model_name='vgg16', filtering=None, base_as="intersection", normalize=True):
+        if anomalies not in ["classless", "classbased", "other"]:
+            raise ValueError("anomalies not in [classless, classbased, other]")
 
         if base_as not in ["intersection", "union"]:
             raise ValueError("base_as not in [intersection, union]")
@@ -122,7 +122,8 @@ class Image(object):
         if pca_dimensions:
             cls.perform_pca(pca_dimensions)
 
-        cls.normalize_features()
+        if normalize:
+            cls.normalize_features()
 
         cls.load_user_anomalies(anomalies, base_as)
 
@@ -138,14 +139,19 @@ class Image(object):
                 for image_name, description in user_anomalies[who_says_that].items():
                     Image.set_image_as_anomaly(image_name, who_says_that, description)
 
-        else:
+        elif mode == "classbased":
             for who_says_that in class_anomalies:
                 for _class in class_anomalies[who_says_that]:
                     for image_name, description in class_anomalies[who_says_that][_class].items():
                         Image.set_image_as_anomaly(image_name, who_says_that, description)
 
+        elif mode == "other":
+            for image in Image.get_images():
+                if classes[image.name] == 'other':
+                    Image.set_image_as_anomaly(image.name, 'all others are anomalies')
+
         for image in Image.get_images():
-            if len(image.anomaly_by) >= (2 if base_as == 'intersection' else 1):
+            if len(image.anomaly_by) >= (2 if (base_as == 'intersection' and mode != "other") else 1):
                 cls.compare_base[image.name] = image
 
     @classmethod
@@ -160,8 +166,6 @@ class Image(object):
         for i, new_features in enumerate(data):
             images[i].features = new_features
 
-        cls.normalize_features()
-
     @classmethod
     def get_feature_dimensions(cls):
         return len(Image.get_images()[0].features)
@@ -170,7 +174,6 @@ class Image(object):
     def create_plot(cls, info):
         people_images = []
         detector_images = []
-        print "Creating graph"
         p.figure(figsize=(19, 10))
         ax = p.subplot()
         for image in Image.get_images():
@@ -198,42 +201,83 @@ class Image(object):
         by_label = OrderedDict(zip(labels, handles))
         ax.legend(by_label.values(), by_label.keys())
 
-        width = 1.0/len(people_images)*2.5
-        for i, image in enumerate(people_images):
-            im = PIL_Image.open(image.path)
-            im.save('tmp.png')
-            img = p.imread('tmp.png')
-            wh_ratio = float(im.size[0]) / im.size[1]
+        tmp_name = str(random()) + '.png'
+        f_people = people_images[:len(people_images)/2]
+        s_people = people_images[len(people_images)/2:]
+        if len(f_people):
+            width = 1.0/len(f_people)*2.5
+            for i, image in enumerate(f_people):
+                im = PIL_Image.open(image.path)
+                im.save(tmp_name)
+                img = p.imread(tmp_name)
+                ratio = im.size[0]/width
+                if im.size[1]/ratio > 0.5: ratio = im.size[1]/0.5
 
-            p.imshow(img, extent=(
-                i*width-1,
-                (i+1)*width-1,
-                2-width/wh_ratio,
-                2
-            ), zorder=-1, origin='upper', aspect='auto')
+                p.imshow(img, extent=(
+                    i*width-1,
+                    i*width-1 + im.size[0]/ratio,
+                    2-im.size[1]/ratio,
+                    2
+                ), zorder=-1, origin='upper', aspect='auto')
+        if len(s_people):
+            width = 1.0/len(s_people)*2.5
+            for i, image in enumerate(s_people):
+                im = PIL_Image.open(image.path)
+                im.save(tmp_name)
+                img = p.imread(tmp_name)
+                ratio = im.size[0]/width
+                if im.size[1]/ratio > 0.5: ratio = im.size[1]/0.5
 
-        width = 1.0/len(detector_images)*2.5
-        for i, image in enumerate(detector_images):
-            im = PIL_Image.open(image.path)
-            im.save('tmp.png')
-            img = p.imread('tmp.png')
-            wh_ratio = float(im.size[0]) / im.size[1]
+                p.imshow(img, extent=(
+                    i*width-1,
+                    i*width-1 + im.size[0]/ratio,
+                    1.5-im.size[1]/ratio,
+                    1.5
+                ), zorder=-1, origin='upper', aspect='auto')
 
-            p.imshow(img, extent=(
-                i*width-1,
-                (i+1)*width-1,
-                -1,
-                -1+width/wh_ratio
-            ), zorder=-1, origin='upper', aspect='auto')
+
+        f_det = detector_images[:len(detector_images)/2]
+        s_det = detector_images[len(detector_images)/2:]
+        if len(f_det):
+            width = 1.0/len(f_det)*2.5
+            for i, image in enumerate(f_det):
+                im = PIL_Image.open(image.path)
+                im.save(tmp_name)
+                img = p.imread(tmp_name)
+                ratio = im.size[0]/width
+                if im.size[1]/ratio > 0.5: ratio = im.size[1]/0.5
+
+                p.imshow(img, extent=(
+                    i*width-1,
+                    i*width-1 + im.size[0]/ratio,
+                    -0.5,
+                    -0.5+im.size[1]/ratio,
+                ), zorder=-1, origin='upper', aspect='auto')
+        if len(s_det):
+            width = 1.0/len(s_det)*2.5
+            for i, image in enumerate(s_det):
+                im = PIL_Image.open(image.path)
+                im.save(tmp_name)
+                img = p.imread(tmp_name)
+                ratio = im.size[0]/width
+                if im.size[1]/ratio > 0.5: ratio = im.size[1]/0.5
+
+                p.imshow(img, extent=(
+                    i*width-1,
+                    i*width-1 + im.size[0]/ratio,
+                    -1,
+                    -1+im.size[1]/ratio,
+                ), zorder=-1, origin='upper', aspect='auto')
 
         info += "anomalies by people:    %s\n" % len(people_images)
         info += "anomalies by detectors: %s\n" % len(detector_images)
 
-        p.suptitle(info, fontsize=8, horizontalalignment='left', x=0.1, y=.66)
+        p.suptitle(info, fontsize=9, horizontalalignment='left', x=0.05, y=.66)
         p.xlim([-1, 1.5])
         p.ylim([-1, 2])
         p.tight_layout(pad=1)
-        os.remove('tmp.png')
+        if os.path.exists(tmp_name):
+            os.remove(tmp_name)
         i = 0
         if not os.path.exists('results'):
             os.mkdir('results')
@@ -241,6 +285,7 @@ class Image(object):
             i += 1
 
         p.savefig('results/results-%d' % i)
+        # p.show()
 
 
     @classmethod
